@@ -16,7 +16,7 @@ alt_y = [0,1,1]
 
 def perceptron(features,labels, num_iter):
     # set weights to zero
-    w = np.zeros(shape=(1,len(features)))
+    w = np.zeros(shape=(len(features)-1))
     weights = []
     misclassified_ = [] 
   
@@ -24,8 +24,8 @@ def perceptron(features,labels, num_iter):
         misclassified = 0
         for x, label in zip(features, labels):
             #print(x)
-            #x = np.array(x)
-            x = np.insert(x,0,1)
+            x = np.array(x)
+            #x = np.insert(x,0,1)
             y = np.dot(w, x.transpose())
             target = 1.0 if (y > 0) else 0.0
             
