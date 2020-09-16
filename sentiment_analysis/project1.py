@@ -36,8 +36,11 @@ def hinge_loss_single(feature_vector, label, theta, theta_0):
     Returns: A real number representing the hinge loss associated with the
     given data point and parameters.
     """
-    # Your code here
-    raise NotImplementedError
+    loss = label*(np.dot(theta,feature_vector) +  theta_0)
+    if loss >= 1:
+        return 0
+    else:
+        return 1-loss
 #pragma: coderesponse end
 
 
@@ -60,8 +63,12 @@ def hinge_loss_full(feature_matrix, labels, theta, theta_0):
     given dataset and parameters. This number should be the average hinge
     loss across all of the points in the feature matrix.
     """
-    # Your code here
-    raise NotImplementedError
+    loss = 0
+    for feature_vector, label in zip(feature_matrix,labels):
+        loss += hinge_loss_single(feature_vector, label, theta, theta_0)
+
+    loss = loss / len(labels)
+    return loss
 #pragma: coderesponse end
 
 
@@ -88,8 +95,13 @@ def perceptron_single_step_update(
     real valued number with the value of theta_0 after the current updated has
     completed.
     """
-    # Your code here
-    raise NotImplementedError
+    new_theta = current_theta
+    new_theta_0 = current_theta_0
+    if label*(np.dot(current_theta,feature_vector)+current_theta_0) < 0.0000000000001:
+        new_theta += np.dot(label, feature_vector)
+        new_theta_0 += label
+    
+    return new_theta, new_theta_0
 #pragma: coderesponse end
 
 
@@ -119,12 +131,14 @@ def perceptron(feature_matrix, labels, T):
     theta_0, the offset classification parameter, after T iterations through
     the feature matrix.
     """
-    # Your code here
+    theta = np.zeros(feature_matrix.shape[1])
+    theta_0 = 0
     for t in range(T):
         for i in get_order(feature_matrix.shape[0]):
-            # Your code here
+            theta, theta_0 = perceptron_single_step_update(feature_matrix[i],labels[i], theta, theta_0)
             pass
-    raise NotImplementedError
+    
+    return theta, theta_0
 #pragma: coderesponse end
 
 
@@ -158,8 +172,19 @@ def average_perceptron(feature_matrix, labels, T):
     Hint: It is difficult to keep a running average; however, it is simple to
     find a sum and divide.
     """
-    # Your code here
-    raise NotImplementedError
+    theta = np.zeros(feature_matrix.shape[1])
+    theta_0 = 0
+    sum_thetas = theta
+    sum_thetas_0 = theta_0
+    for t in range(T):
+        for i in get_order(feature_matrix.shape[0]):
+            theta, theta_0 = perceptron_single_step_update(feature_matrix[i],labels[i], theta, theta_0)
+            sum_thetas += theta
+            sum_thetas_0 += theta_0
+    pass
+        
+    n=feature_matrix.shape[0]
+    return sum_thetas/(n*T), sum_thetas_0/(n*T)
 #pragma: coderesponse end
 
 
@@ -190,8 +215,14 @@ def pegasos_single_step_update(
     real valued number with the value of theta_0 after the current updated has
     completed.
     """
-    # Your code here
-    raise NotImplementedError
+    if label*(np.dot(current_theta,feature_vector) + current_theta_0) < 1.000001:
+        new_theta = (1-eta*L)*current_theta + eta*label*feature_vector
+        new_theta_0 = current_theta_0 + eta*label
+    else:
+        new_theta = (1-eta*L)*current_theta
+        new_theta_0 = current_theta_0
+    
+    return new_theta, new_theta_0
 #pragma: coderesponse end
 
 
@@ -225,8 +256,23 @@ def pegasos(feature_matrix, labels, T, L):
     number with the value of the theta_0, the offset classification
     parameter, found after T iterations through the feature matrix.
     """
-    # Your code here
-    raise NotImplementedError
+    theta = np.zeros(feature_matrix.shape[1])
+    theta_0 = 0
+    counter = 0
+
+    for t in range(T):
+        for i in get_order(feature_matrix.shape[0]):
+            counter += 1
+            eta = 1/counter**(1/2)
+            theta, theta_0 = pegasos_single_step_update(feature_vector=feature_matrix[i],
+                                                        label = labels[i],
+                                                        L = L,
+                                                        eta = eta,
+                                                        current_theta = theta, 
+                                                        current_theta_0 = theta_0)
+        pass
+    pass
+    return theta, theta_0
 #pragma: coderesponse end
 
 # Part II
