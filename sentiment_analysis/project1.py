@@ -263,7 +263,7 @@ def pegasos(feature_matrix, labels, T, L):
     for t in range(T):
         for i in get_order(feature_matrix.shape[0]):
             counter += 1
-            eta = 1/counter**(1/2)
+            eta = 1/(counter**(1/2))
             theta, theta_0 = pegasos_single_step_update(feature_vector=feature_matrix[i],
                                                         label = labels[i],
                                                         L = L,
