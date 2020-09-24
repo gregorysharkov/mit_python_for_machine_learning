@@ -64,11 +64,11 @@ def perceptron_single_step_update(
         feature_vector,
         label,
         current_theta,
-        current_theta_0):
+        current_theta_0,
+        zero_offset=False):
     """
     Properly updates the classification parameter, theta and theta_0, on a
     single step of the perceptron algorithm.
-
     Args:
         feature_vector - A numpy array describing a single data point.
         label - The correct classification of the feature vector.
@@ -76,26 +76,31 @@ def perceptron_single_step_update(
             algorithm before this update.
         current_theta_0 - The current theta_0 being used by the perceptron
             algorithm before this update.
-
     Returns: A tuple where the first element is a numpy array with the value of
     theta after the current update has completed and the second element is a
     real valued number with the value of theta_0 after the current updated has
     completed.
     """
-    if label * (np.dot(current_theta, feature_vector) + current_theta_0) <= 1e-7:
-        return (current_theta + label * feature_vector, current_theta_0 + label)
+    # Tolerance for floating point errors
+    eps = 1e-5
+    
+    agreement = float(label*(current_theta.dot(feature_vector.copy()) + current_theta_0))
+    
+    if abs(agreement) < eps or agreement < 0:   # 1st condition to check if = 0
+            current_theta = current_theta.copy() + label*feature_vector
+            current_theta_0 = current_theta_0 + int(not zero_offset)*label
+            
     return (current_theta, current_theta_0)
+    
 #pragma: coderesponse end
 
 
 #pragma: coderesponse template
-def perceptron(feature_matrix, labels, T):
+def perceptron(feature_matrix, labels, T, zero_offset=False):
     """
     Runs the full perceptron algorithm on a given set of data. Runs T
-    iterations through the data set, there is no need to worry about
-    stopping early.
-
-
+    iterations through the data set.
+    NOTE: Iterate the data matrix by the orders returned by get_order(feature_matrix.shape[0])
     Args:
         feature_matrix -  A numpy matrix describing the given data. Each row
             represents a single data point.
@@ -103,35 +108,22 @@ def perceptron(feature_matrix, labels, T):
             correct classification of the kth row of the feature matrix.
         T - An integer indicating how many times the perceptron algorithm
             should iterate through the feature matrix.
-
     Returns: A tuple where the first element is a numpy array with the value of
     theta, the linear classification parameter, after T iterations through the
     feature matrix and the second element is a real number with the value of
     theta_0, the offset classification parameter, after T iterations through
     the feature matrix.
     """
-    (nsamples, nfeatures) = feature_matrix.shape
-    theta = np.zeros(nfeatures)
-    theta_0 = 0.0
-    tmp = []
-    for t in range(T):
-        for i in get_order(nsamples): 
-            theta, theta_0 = perceptron_single_step_update(
-                feature_matrix[i], labels[i], theta.copy(), theta_0)
-            tmp.append(
-                [
-                    feature_matrix[i][0],
-                    feature_matrix[i][1],
-                    labels[i],
-                    theta[0],
-                    theta[1],
-                    theta_0
-                ]
-            )
+    current_theta = np.zeros(feature_matrix.shape[1])
+    current_theta_0 = 0.0
     
-    import pandas as pd
-    debug_df = pd.DataFrame(tmp, columns=["x_1","x_2","y","theta_1","theta_2","theta_0"]).to_csv("pegassos_log.csv",sep=";")
-    return (theta, theta_0)
+    for t in range(T):
+        for i in range(feature_matrix.shape[0]): #get_order(feature_matrix.shape[0]):
+            current_theta, current_theta_0 = \
+            perceptron_single_step_update(feature_matrix[i,:], labels[i], \
+                                          current_theta, current_theta_0)
+            
+    return (current_theta, current_theta_0)
 #pragma: coderesponse end
 
 
@@ -141,6 +133,9 @@ def average_perceptron(feature_matrix, labels, T):
     Runs the average perceptron algorithm on a given set of data. Runs T
     iterations through the data set, there is no need to worry about
     stopping early.
+    NOTE: Please use the previously implemented functions when applicable.
+    Do not copy paste code from previous parts.
+    NOTE: Iterate the data matrix by the orders returned by get_order(feature_matrix.shape[0])
     Args:
         feature_matrix -  A numpy matrix describing the given data. Each row
             represents a single data point.
@@ -148,31 +143,40 @@ def average_perceptron(feature_matrix, labels, T):
             correct classification of the kth row of the feature matrix.
         T - An integer indicating how many times the perceptron algorithm
             should iterate through the feature matrix.
-
     Returns: A tuple where the first element is a numpy array with the value of
     the average theta, the linear classification parameter, found after T
     iterations through the feature matrix and the second element is a real
     number with the value of the average theta_0, the offset classification
     parameter, found after T iterations through the feature matrix.
-
     Hint: It is difficult to keep a running average; however, it is simple to
     find a sum and divide.
     """
-    (nsamples, nfeatures) = feature_matrix.shape
-    theta = np.zeros(nfeatures)
-    theta_sum = np.zeros(nfeatures)
-    theta_0 = 0.0
+    current_theta = np.zeros(feature_matrix.shape[1])
+    current_theta_0 = 0.0
+    
+    # Keep track of the sum through the loops
+    theta_sum = np.zeros(feature_matrix.shape[1])
     theta_0_sum = 0.0
+    
+    n = feature_matrix.shape[0]     # No of examples
+    
     for t in range(T):
-        for i in get_order(nsamples):
-            theta, theta_0 = perceptron_single_step_update(
-                feature_matrix[i], labels[i], theta, theta_0)
-            theta_sum += theta
-            theta_0_sum += theta_0
-    return (theta_sum / (nsamples * T), theta_0_sum / (nsamples * T))
+        for i in get_order(feature_matrix.shape[0]):
+            current_theta, current_theta_0 = \
+            perceptron_single_step_update(feature_matrix[i,:], labels[i], \
+                                          current_theta, current_theta_0)
+            
+            theta_sum = theta_sum + current_theta
+            theta_0_sum = theta_0_sum + current_theta_0
+            
+    theta_avg = (1/(n*T))*theta_sum
+    theta_0_avg = (1/(n*T))*theta_0_sum
+    
+    return (theta_avg, theta_0_avg)
 #pragma: coderesponse end
 
 
+#pragma: coderesponse template
 def pegasos_single_step_update(
         feature_vector,
         label,
@@ -183,7 +187,6 @@ def pegasos_single_step_update(
     """
     Properly updates the classification parameter, theta and theta_0, on a
     single step of the Pegasos algorithm
-
     Args:
         feature_vector - A numpy array describing a single data point.
         label - The correct classification of the feature vector.
@@ -193,30 +196,34 @@ def pegasos_single_step_update(
             algorithm before this update.
         current_theta_0 - The current theta_0 being used by the
             Pegasos algorithm before this update.
-
     Returns: A tuple where the first element is a numpy array with the value of
     theta after the current update has completed and the second element is a
     real valued number with the value of theta_0 after the current updated has
     completed.
-    """
-    mult = 1 - (eta * L)
-    if label * (np.dot(feature_vector, current_theta) + current_theta_0) <= 1:
-        return ((mult * current_theta) + (eta * label * feature_vector),
-                (current_theta_0) + (eta * label))
-    return (mult * current_theta, current_theta_0)
+    """ 
+    agreement = float(label*(current_theta.dot(feature_vector) + current_theta_0))
+    
+    if agreement <= 1.0:
+        current_theta = (1-eta*L)*current_theta + eta*label*feature_vector
+        current_theta_0 = current_theta_0 + eta*label
+    else:
+        current_theta = (1-eta*L)*current_theta
+        
+    return (current_theta, current_theta_0)
+#pragma: coderesponse end
 
 
+#pragma: coderesponse template
 def pegasos(feature_matrix, labels, T, L):
     """
     Runs the Pegasos algorithm on a given set of data. Runs T
     iterations through the data set, there is no need to worry about
     stopping early.
-
     For each update, set learning rate = 1/sqrt(t),
     where t is a counter for the number of updates performed so far (between 1
     and nT inclusive).
-
-
+    NOTE: Please use the previously implemented functions when applicable.
+    Do not copy paste code from previous parts.
     Args:
         feature_matrix - A numpy matrix describing the given data. Each row
             represents a single data point.
@@ -226,24 +233,30 @@ def pegasos(feature_matrix, labels, T, L):
             should iterate through the feature matrix.
         L - The lamba value being used to update the Pegasos
             algorithm parameters.
-
     Returns: A tuple where the first element is a numpy array with the value of
     the theta, the linear classification parameter, found after T
     iterations through the feature matrix and the second element is a real
     number with the value of the theta_0, the offset classification
     parameter, found after T iterations through the feature matrix.
     """
-    (nsamples, nfeatures) = feature_matrix.shape
-    theta = np.zeros(nfeatures)
-    theta_0 = 0
-    count = 0
+    # Your code here
+    c = 1
+    
+    # Initialize theta and theta0
+    current_theta = np.zeros(feature_matrix.shape[1])
+    current_theta_0 = 0.0
+    
     for t in range(T):
-        for i in get_order(nsamples):
-            count += 1
-            eta = 1.0 / np.sqrt(count)
-            (theta, theta_0) = pegasos_single_step_update(
-                feature_matrix[i], labels[i], L, eta, theta, theta_0)
-    return (theta, theta_0)
+        for i in get_order(feature_matrix.shape[0]):
+            eta_t = 1/np.sqrt(c)  # Update eta every iteration
+            c += 1 # Update counter
+            
+            # Run pegasos algorithm to get theta and theta0
+            current_theta, current_theta_0 = pegasos_single_step_update(feature_matrix[i,:], \
+             labels[i], L, eta_t, current_theta, current_theta_0)
+            
+    return (current_theta, current_theta_0)
+#pragma: coderesponse end
 
 # Part II
 
