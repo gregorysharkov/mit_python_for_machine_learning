@@ -58,6 +58,15 @@ def load_data(path_data, extras=False):
 
     return data
 
+def load_stop_words(path_data):
+    try:
+        f_data = open(path_data,"r")
+        full_content = f_data.read()
+        stop_words = full_content.split("\n")
+    finally:
+        f_data.close()
+    return stop_words
+
 def write_predictions(path_submit_data, preds):
     if PYTHON3:
         f_data = open(path_submit_data, encoding="latin1")
