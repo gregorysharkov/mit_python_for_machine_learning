@@ -31,13 +31,19 @@ def compute_probabilities(X, theta, temp_parameter):
     Returns:
         H - (k, n) NumPy array, where each entry H[j][i] is the probability that X[i] is labeled as j
     """
-    #YOUR CODE HERE
-    raise NotImplementedError
+    theta_x = np.dot(theta,X.transpose())/temp_parameter
+    
+    #normalization constant to avoid overflow
+    c = np.max(theta_x, axis = 0)
+    new_theta_x = theta_x -c
+
+    exp_theta_x = np.exp(new_theta_x)
+    normalisation = 1/np.sum(exp_theta_x, axis=0)
+    return normalisation*exp_theta_x
 
 def compute_cost_function(X, Y, theta, lambda_factor, temp_parameter):
     """
     Computes the total cost over every datapoint.
-
     Args:
         X - (n, d) NumPy array (n datapoints each with d features)
         Y - (n, ) NumPy array containing the labels (a number from 0-9) for each
@@ -46,12 +52,34 @@ def compute_cost_function(X, Y, theta, lambda_factor, temp_parameter):
                 model for label j
         lambda_factor - the regularization constant (scalar)
         temp_parameter - the temperature parameter of softmax function (scalar)
-
     Returns
         c - the cost value (scalar)
     """
-    #YOUR CODE HERE
-    raise NotImplementedError
+    
+    # Get number of labels
+    k = theta.shape[0]
+    
+    # Get number of examples
+    n = X.shape[0]
+    
+    # avg error term
+    
+    # Clip prob matrix to avoid NaN instances
+    clip_prob_matrix = np.clip(compute_probabilities(X, theta, temp_parameter), 1e-15, 1-1e-15)
+    
+    # Take the log of the matrix of probabilities
+    log_clip_matrix = np.log(clip_prob_matrix)
+    
+    # Create a sparse matrix of [[y(i) == j]]
+    M = sparse.coo_matrix(([1]*n, (Y, range(n))), shape = (k,n)).toarray()
+    
+    # Only add terms of log(matrix of prob) where M == 1
+    error_term = (-1/n)*np.sum(log_clip_matrix[M == 1])    
+                
+    # Regularization term
+    reg_term = (lambda_factor/2)*np.linalg.norm(theta)**2
+    
+    return error_term + reg_term
 
 def run_gradient_descent_iteration(X, Y, theta, alpha, lambda_factor, temp_parameter):
     """
@@ -134,6 +162,7 @@ def softmax_regression(X, Y, temp_parameter, alpha, lambda_factor, k, num_iterat
     """
     X = augment_feature_vector(X)
     theta = np.zeros([k, X.shape[1]])
+
     cost_function_progression = []
     for i in range(num_iterations):
         cost_function_progression.append(compute_cost_function(X, Y, theta, lambda_factor, temp_parameter))
