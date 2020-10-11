@@ -1,31 +1,51 @@
-from linear_regression import *
+import time
+import numpy as np
+import scipy.sparse as sparse
 
-X = np.matrix(
-    [
-        [0.91595676, 0.78811094],
-        [0.06528801, 0.47707198],
-        [0.91349473, 0.28055752],
-        [0.27435813, 0.61743583],
-        [0.457414, 0.67209508],
-        [0.19971861, 0.82836261],
-        [0.7135627, 0.43089149],
-        [0.21165719, 0.0594011 ],
-        [0.7231735, 0.82088695],
-        [0.58355689, 0.35665718],
-        [0.31219022, 0.60539037],
-        [0.22236907, 0.45801933],
-        [0.13626675, 0.55444191],
-        [0.6236042, 0.48399258]
-    ]
-)
+ITER = 100
+K = 10
+N = 10000
 
-Y = np.array([
-    0.8772511, 0.64463714, 0.80683779, 0.61071563, 0.43231699, 0.18094238,
-    0.57629478, 0.19093095, 0.3430267, 0.78840841, 0.04925975, 0.55688998,
-    0.99026569, 0.60998504])
+def naive(indices, k):
+		mat = [[1 if i == j else 0 for j in range(k)] for i in indices]
+		return np.array(mat).T
 
-result = [0.51230393, 0.44684891]
 
-print(closed_form(X, Y, 0.4385512673048867))
-print(result)
+def with_sparse(indices, k):
+		n = len(indices)
+		M = sparse.coo_matrix(([1]*n, (Y, range(n))), shape=(k,n)).toarray()
+		return M
 
+
+Y = np.random.randint(0, K, size=N)
+
+t0 = time.time()
+for i in range(ITER):
+		naive(Y, K)
+print(time.time() - t0)
+
+
+t0 = time.time()
+for i in range(ITER):
+		with_sparse(Y, K)
+print(time.time() - t0)
+
+print(sparse.coo_matrix([1]*5,(Y, range(5)))).toarray()
+
+
+# x = np.array([
+#     [2.5,0.5,2.2,1.9,3.1,2.3,2.0,1.0,1.5,1.1],
+#     [2.4,0.7,2.9,2.2,3.0,2.7,1.6,1.1,1.6,0.9],
+# ]).T
+
+#     # [2.9,0.8,2.0,1.95,3.0,2.4,2.1,1.1,1.4,1.1]
+
+# feature_means = x.mean(axis=0) #[1.81,1.91]
+
+# x_centered = x - feature_means
+# cov_matrix = np.cov(x_centered.T)
+# eigen_values = np.linalg.eig(cov_matrix)[0]
+# eigen_vectors = np.linalg.eig(cov_matrix)[1]
+
+# print(np.dot(x_centered,eigen_vectors[:2,:].T))
+# print(np.dot(x_centered,principal_components(x_centered)[:2,:].T))
