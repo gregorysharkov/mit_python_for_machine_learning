@@ -13,7 +13,7 @@ import utils
 from utils import *
 from train_utils import batchify_data, run_epoch, train_model
 
-def main():
+def main(batch_size, learning_rate, momentum, activation):
     # Load the dataset
     num_classes = 10
     X_train, y_train, X_test, y_test = get_MNIST_data()
@@ -31,7 +31,7 @@ def main():
     y_train = [y_train[i] for i in permutation]
 
     # Split dataset into batches
-    batch_size = 32
+    # batch_size = 32 
     train_batches = batchify_data(X_train, y_train, batch_size)
     dev_batches = batchify_data(X_dev, y_dev, batch_size)
     test_batches = batchify_data(X_test, y_test, batch_size)
@@ -39,24 +39,69 @@ def main():
     #################################
     ## Model specification TODO
     model = nn.Sequential(
-              nn.Linear(784, 10),
-              nn.ReLU(),
-              nn.Linear(10, 10),
+              nn.Linear(784, 128),
+              activation,
+              nn.Linear(128, 10),
             )
-    lr=0.1
-    momentum=0
+    lr=learning_rate            
+    momentum=momentum
     ##################################
 
     train_model(train_batches, dev_batches, model, lr=lr, momentum=momentum)
 
     ## Evaluate the model on test data
-    loss, accuracy = run_epoch(test_batches, model.eval(), None)
+    #loss, accuracy = run_epoch(test_batches, model.eval(), None)
+    loss, accuracy = run_epoch(dev_batches, model.eval(), None)
 
-    print ("Loss on test set:"  + str(loss) + " Accuracy on test set: " + str(accuracy))
+    print ("Loss on test set:"  + str(loss) + " Accuracy on validation (dev) set: " + str(accuracy))
+    return accuracy
 
 
 if __name__ == '__main__':
     # Specify seed for deterministic behavior, then shuffle. Do not change seed for official submissions to edx
-    np.random.seed(12321)  # for reproducibility
-    torch.manual_seed(12321)  # for reproducibility
-    main()
+    hyper_parameters = {
+        'base': {
+            "batch_size": 32,
+            "learning_rate": .1,
+            "momentum": 0,
+            "activation": nn.ReLU() 
+        },
+        'modified_batch_size': {
+            "batch_size": 64,
+            "learning_rate": .1,
+            "momentum": 0,
+            "activation": nn.ReLU() 
+        },
+        'reduced_learning_rate': {
+            "batch_size": 64,
+            "learning_rate": .01,
+            "momentum": 0,
+            "activation": nn.ReLU() 
+        },
+        'changed_momentum': {
+            "batch_size": 64,
+            "learning_rate": .01,
+            "momentum": .9,
+            "activation": nn.ReLU() 
+        },
+        'alternative_activation': {
+            "batch_size": 64,
+            "learning_rate": .01,
+            "momentum": 0,
+            "activation": nn.LeakyReLU() 
+        }
+    }
+
+    accuracies = []
+    for key, parameters in hyper_parameters.items():
+        np.random.seed(12321)  # for reproducibility
+        torch.manual_seed(12321)  # for reproducibility
+        acc = main(
+            batch_size = parameters["batch_size"],
+            learning_rate = parameters["learning_rate"],
+            momentum = parameters["momentum"],
+            activation = parameters["activation"]
+        )
+        accuracies.append([key,acc])
+    
+    print(accuracies)
