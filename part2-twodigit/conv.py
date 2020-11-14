@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from train_utils import batchify_data, run_epoch, train_model, Flatten
 import utils_multiMNIST as U
-path_to_data_dir = '../Datasets/'
+path_to_data_dir = './Datasets/'
 use_mini_dataset = True
 
 batch_size = 64
@@ -28,7 +28,6 @@ class CNN(nn.Module):
         self.dropout = nn.Dropout(p = 0.5)
         self.linear2 = nn.Linear(64, 20)
 
-    def forward(self, x):
     def forward(self, x):
         x = self.conv2d_1(x)
         x = self.relu(x)
